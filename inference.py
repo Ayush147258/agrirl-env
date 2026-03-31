@@ -28,3 +28,5 @@ def explain(obs):
     if obs["crop_growth"] < 30:
         return "Fertilize to boost early growth"
     return "Wait to maintain balance"   
+
+
