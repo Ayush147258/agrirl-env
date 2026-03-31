@@ -54,7 +54,10 @@ app = create_app(
     max_concurrent_envs=1, # increase this number to 1 if you want to run multiple environments in parallel (requires more resources)
 )
 
-def main(host: str = "0.0.0.0", port: int = 8000):
+def main():
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+
     """
     Entry point for direct execution via uv run or python -m.
 
@@ -71,9 +74,7 @@ def main(host: str = "0.0.0.0", port: int = 8000):
     multiple workers:
         uvicorn agrirl_env.server.app:app --workers 4
     """
-    import uvicorn
-
-    uvicorn.run(app, host=host, port=port)
+    
 
 
 if __name__ == "__main__":
