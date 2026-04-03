@@ -136,11 +136,13 @@ docker build -t agricore -f server/Dockerfile .
 docker run -d -p 8000:8000 agricore
 ```
 
-### API Access
+### API Access 
 ```
 http://localhost:8000/docs
+
 ```
-[link](https://huggingface.co/spaces/ayush712145/agrirl-env)
+## Deployment
+[hugging face - agrirl-env](https://huggingface.co/spaces/ayush712145/agrirl-env)
 ---
 
 ## 📈 Sample Results
@@ -221,5 +223,7 @@ class AgrirlAction(Action):
 Built for the **Meta-PyTorch OpenEnv Hackathon** using the OpenEnv framework.
 
 ---
+## Deployment link:
+https://huggingface.co/spaces/ayush712145/agrirl-env
 
 *AgriCore — where every drop of water is a decision.*
