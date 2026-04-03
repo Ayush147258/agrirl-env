@@ -1,31 +1,37 @@
-# Copyright (c) Meta Platforms, Inc. and affiliates.
-# All rights reserved.
-#
-# This source code is licensed under the BSD-style license found in the
-# LICENSE file in the root directory of this source tree.
+from pydantic import BaseModel, Field
+from typing import List, Literal, Optional, TYPE_CHECKING
 
-"""
-Data models for the Agrirl Env Environment.
+if TYPE_CHECKING:
+    from openenv.core.env_server.types import Action, Observation
+else:
+    Action = BaseModel
+    Observation = BaseModel
 
-The agrirl_env environment simulates agricultural management.
-"""
+WeatherType = Literal["sunny", "rainy", "cloudy", "heatwave", "frost"]
 
-from openenv.core.env_server.types import Action, Observation
-from pydantic import Field
-
+class Crop(BaseModel):
+    id: int
+    moisture: float
+    growth: float
+    stage: Literal["seed", "vegetative", "flowering", "mature"]
+    wait_days: int
+    fertilized_times: int
+    pest_level: float
 
 class AgrirlAction(Action):
-    """Action for the Agrirl Env environment."""
-
-    action: str = Field(..., description="Action to take: 'irrigate', 'fertilize', or 'harvest'")
-
+    crop_id: int=0
+    action: Literal["irrigate", "fertilize", "wait", "harvest"]
 
 class AgrirlObservation(Observation):
-    """Observation from the Agrirl Env environment."""
-
-    soil_moisture: float = Field(default=50.0, description="Current soil moisture level")
-    crop_growth: float = Field(default=0.0, description="Current crop growth level")
-    day: int = Field(default=1, description="Current day")
-    weather: str = Field(default="sunny", description="Current weather")
-    done: bool = Field(default=False, description="Whether the episode is done")
-    reward: float = Field(default=0.0, description="Reward for the last action")
+    crops: List[Crop]
+    water: float
+    fertilizer: float
+    energy: float
+    day: int
+    weather: WeatherType
+    forecast: WeatherType
+    market_price: float
+    soil_health: float
+    reward: float = 0.0
+    done: bool = False
+    score: Optional[float] = None

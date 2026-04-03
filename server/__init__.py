@@ -6,6 +6,6 @@
 
 """Agrirl Env environment server components."""
 
-from .agrirl_env_environment import AgrirlEnvironment
+from .agrirl_env_environment import AgriCoreEnv
 
-__all__ = ["AgrirlEnvironment"]
+__all__ = ["AgriCoreEnv"]
