@@ -6,11 +6,11 @@ except Exception as e:
     ) from e
 
 try:
-    from agrirl_env.models import AgrirlAction, AgrirlObservation
-    from agrirl_env.server.agrirl_env_environment import AgriCoreEnv as AgrirlEnvironment
+    from ..models import AgrirlAction, AgrirlObservation
+    from .agrirl_env_environment import AgriCoreEnv as AgrirlEnvironment
 except ModuleNotFoundError:
     from models import AgrirlAction, AgrirlObservation
-    from .agrirl_env_environment import AgriCoreEnv as AgrirlEnvironment
+    from server.agrirl_env_environment import AgriCoreEnv as AgrirlEnvironment
 
 app = create_app(
     AgrirlEnvironment,
