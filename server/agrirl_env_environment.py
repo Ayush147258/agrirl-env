@@ -41,6 +41,7 @@ class AgriCoreEnv(Environment):
         self.water = 120
         self.fertilizer = 60
         self.energy = 200
+        self.pesticide = 40
 
         self.market_price = 1.0
         self.soil_health = 1.0
@@ -126,7 +127,14 @@ class AgriCoreEnv(Environment):
                 reward += gain
             else:
                 reward -= 3  # penalty for invalid action
-
+        elif action.action == "pesticide":
+            if self.pesticide >= 5 and self.energy >= 2:
+               c.pest_level = max(0, c.pest_level - 3)  # ✅ reduces pest level
+               self.pesticide -= 5
+               self.energy -= 2
+               reward += 2  # small reward for pest control
+            else:
+               reward -= 1  # penalty for invalid action
         elif action.action == "harvest":
             if c.stage == "mature":
                 # ✅ Market price system from 1st file
@@ -219,6 +227,7 @@ class AgriCoreEnv(Environment):
             water=self.water,
             fertilizer=self.fertilizer,
             energy=self.energy,
+            pesticide=self.pesticide,
             day=self.day,
             weather=cast(WeatherType, weather),
             forecast=cast(WeatherType, self.forecast),

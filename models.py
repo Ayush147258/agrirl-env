@@ -20,12 +20,13 @@ class Crop(BaseModel):
 
 class AgrirlAction(Action):
     crop_id: int=0
-    action: Literal["irrigate", "fertilize", "wait", "harvest"]
+    action: Literal["irrigate", "fertilize", "wait", "harvest", "pesticide"]
 
 class AgrirlObservation(Observation):
     crops: List[Crop]
     water: float
     fertilizer: float
+    pesticide: float
     energy: float
     day: int
     weather: WeatherType

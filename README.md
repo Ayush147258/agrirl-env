@@ -193,6 +193,7 @@ class AgrirlObservation(Observation):
     water: float               # Remaining water (0–120)
     fertilizer: float          # Remaining fertilizer (0–60)
     energy: float              # Remaining energy (0–200)
+    pesticide: float           # Reduces pest level
     day: int                   # Current day (1–30)
     weather: WeatherType       # Current weather
     forecast: WeatherType      # Tomorrow's weather (partial observability aid)
@@ -211,8 +212,10 @@ class AgrirlAction(Action):
     action: Literal[
         "irrigate",            # +15 moisture, costs 10 water + 5 energy
         "fertilize",           # +growth (diminishing), costs 5 fertilizer + 3 energy
+        "pesticide"            #Targeted pest reduction (Cost: 8 Chem + 2 Energy) with 0.5% soil health penalty                      
         "harvest",             # Convert growth to reward × market_price
-        "wait"                 # Skip turn, small penalty
+        "wait" ,               # Skip turn, small penalty
+        
     ]
 ```
 

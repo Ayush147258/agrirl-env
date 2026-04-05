@@ -22,6 +22,13 @@ def act(obs) -> Action:
     if critical and obs.water >= 10 and obs.energy >= 5:
         crop = min(critical, key=lambda c: c.moisture)
         return Action(crop_id=crop.id, action="irrigate")
+    
+    # 🐜 PESTICIDE — if any crop has high pest level and pesticide available
+    if obs.pesticide >= 5 and obs.energy >= 2:
+        infested = [c for c in obs.crops if c.pest_level > 2]
+        if infested:
+            worst = max(infested, key=lambda c: c.pest_level)
+            return Action(crop_id=worst.id, action="pesticide")
 
     # ──────────────────────────────────────────
     # 2. HARVEST mature crops when price is good
@@ -123,7 +130,11 @@ def explain(obs) -> str:
             early = [c for c in obs.crops if c.stage == "seed" and c.growth < 20 and c.fertilized_times < 2]
             if early:
                 return f"Fertilize crop {early[0].id} — early boost (growth {early[0].growth:.1f})"
-
+    if obs.pesticide >= 5:
+        infested = [c for c in obs.crops if c.pest_level > 2]
+        if infested:
+            worst = max(infested, key=lambda c: c.pest_level)
+            return f"Spray crop {worst.id} — pest level critical ({worst.pest_level})"
     if obs.day > 20 and mature:
         return f"Late game harvest crop {mature[0].id}"
 
@@ -167,6 +178,7 @@ def run_episode(task: str = "easy", verbose: bool = True) -> float:
     print(f"Final Score    : {final_score:.2f}")
     print(f"Water Left     : {env.water}")
     print(f"Fertilizer Left: {env.fertilizer}")
+    print(f"Pesticide Left : {env.pesticide}")
     print(f"Soil Health    : {env.soil_health}")
     print(f"Market Price   : {env.market_price:.2f}")
     print(f"Crops Growth   : {[round(c.growth, 1) for c in env.crops]}")

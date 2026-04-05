@@ -41,7 +41,13 @@ def smart_policy(obs) -> Action:
         ]
         if growing:
             return Action(crop_id=growing[0].id, action="fertilize")
-
+    # In greedy_policy — ignore pests (greedy doesn't spray)
+    # In smart_policy — pesticide if any crop has high pest level and pesticide available 
+    if obs.pesticide >= 5 and obs.energy >= 2:
+        infested = [c for c in obs.crops if c.pest_level > 2]
+        if infested:
+            worst = max(infested, key=lambda c: c.pest_level)
+            return Action(crop_id=worst.id, action="pesticide")
     # 💧 Irrigate driest crop by default
     crop = min(obs.crops, key=lambda c: c.moisture)
     return Action(crop_id=crop.id, action="irrigate")
