@@ -1,41 +1,11 @@
 spec_version: 1
 name: agrirl_env
 type: openenv
+runtime: fastapi
 description: |
   AgriRL is a reinforcement learning environment where an agent manages
   soil moisture and crop growth. The agent must balance irrigation,
   fertilization, and timing of harvest to maximize yield efficiently.
 
 entry_point: server.app:app
-
-action_space:
-  type: object
-  properties:
-    action:
-      type: string
-      enum:
-        - wait
-        - irrigate
-        - fertilize
-        - harvest
-
-observation_space:
-  type: object
-  properties:
-    soil_moisture:
-      type: number
-    crop_growth:
-      type: number
-    day:
-      type: integer
-    weather:
-      type: string
-
-reward_range:
-  min: -10
-  max: 100
-
-tags:
-  - reinforcement-learning
-  - agriculture
-  - simulation
+port: 8000

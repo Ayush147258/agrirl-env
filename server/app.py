@@ -6,20 +6,15 @@ except Exception as e:
     ) from e
 
 
-# ✅ FIXED IMPORT BLOCK
 try:
     from ..models import AgrirlAction, AgrirlObservation
-    from .agrirl_env_environment import AgriCoreEnv as AgrirlEnvironment
-
+    from .agrirl_env_environment import AgriCoreEnv 
 except (ModuleNotFoundError, ImportError):
-    # fallback for direct execution (uvicorn / docker / HF)
     from models import AgrirlAction, AgrirlObservation
-    from server.agrirl_env_environment import AgriCoreEnv as AgrirlEnvironment
+    from server.agrirl_env_environment import AgriCoreEnv 
 
-
-# App creation
 app = create_app(
-    AgrirlEnvironment,
+    AgriCoreEnv,
     AgrirlAction,
     AgrirlObservation,
     env_name="agrirl_env",
@@ -34,8 +29,8 @@ def main(host: str = "0.0.0.0", port: int = 8000):
 
 if __name__ == "__main__":
     import argparse
-
     parser = argparse.ArgumentParser()
+    parser.add_argument("--host", type=str, default="0.0.0.0")
     parser.add_argument("--port", type=int, default=8000)
     args = parser.parse_args()
-    main(port=args.port)
+    main(host=args.host, port=args.port)

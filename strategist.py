@@ -2,27 +2,42 @@
 """
 Strategist Agent — Hierarchical Multi-Agent Layer
 --------------------------------------------------
-Uses Claude to set high-level strategic directives every N days.
+Uses OpenAI-compatible client (Gemini backend) to set high-level
+strategic directives every N days.
 
-Resilience features:
-  - Graceful degradation: API failure retains last known strategy silently
-  - Local heuristic fallback: deterministic expert-system strategy (no API)
-  - Mock mode: USE_MOCK_AI = True reads from mock_responses.json
-  - Low-token model: claude-haiku by default (fast + cheap)
+OpenEnv compliance:
+  - Reads API_BASE_URL, MODEL_NAME, HF_TOKEN env variables
+  - OpenAI client for all LLM calls
+  - Warnings emitted as structured JSON {"type": "WARN", ...}
+
+Resilience hierarchy:
+  1. Mock mode (USE_MOCK_AI=true)  → reads from mock_responses.json
+  2. Live API (OpenAI → Gemini)    → fast, low-cost LLM call
+  3. Graceful degradation          → retains previous strategy on failure
+  4. Heuristic fallback            → deterministic expert-system rules
+
+Differentiator features preserved:
+  - Full Strategy dataclass with all 6 thresholds + summary()
+  - Heuristic expert-system with 5 scenario rules
   - Review interval: only calls API every 5 days (not every step)
+  - Mock pool cycling for demo mode
 """
 
 import json
 import os
 import re
 from dataclasses import dataclass
-from typing import Optional
 
-# ── Config ─────────────────────────────────────────────────────────────────────
-USE_MOCK_AI    = os.getenv("USE_MOCK_AI", "false").lower() == "true"
-MOCK_FILE      = "mock_responses.json"
-DEFAULT_MODEL = "gemini-2.0-flash"
-api_key = os.getenv("GEMINI_API_KEY")
+from openai import OpenAI
+
+# ── OpenEnv env variables (matches inference.py) ──────────────────────────────
+API_BASE_URL = os.getenv("API_BASE_URL",  "https://generativelanguage.googleapis.com/v1beta/openai/")
+MODEL_NAME   = os.getenv("MODEL_NAME",    "gemini-2.0-flash")
+HF_TOKEN     = os.getenv("HF_TOKEN")
+
+USE_MOCK_AI = os.getenv("USE_MOCK_AI", "false").lower() == "true"
+MOCK_FILE   = "mock_responses.json"
+
 
 # ── Strategy Directives ────────────────────────────────────────────────────────
 
@@ -32,13 +47,13 @@ class Strategy:
     High-level directives issued by the Strategist to the Executor.
     All thresholds override the Executor's built-in defaults.
     """
-    priority: str            = "balanced"   # soil_health | profit | balanced | survival
-    moisture_threshold: float = 35.0        # irrigate below this
-    harvest_price_floor: float = 1.0        # only harvest above this market price
-    fertilize_max_day: int    = 20          # stop fertilizing after this day
-    pest_threshold: float     = 2.0         # spray above this pest level
-    water_reserve_pct: float  = 0.25        # keep this fraction of water in reserve
-    reasoning: str            = ""          # explanation of this strategy
+    priority:            str   = "balanced"  # soil_health | profit | balanced | survival
+    moisture_threshold:  float = 35.0        # irrigate below this
+    harvest_price_floor: float = 1.0         # only harvest above this market price
+    fertilize_max_day:   int   = 20          # stop fertilizing after this day
+    pest_threshold:      float = 2.0         # spray above this pest level
+    water_reserve_pct:   float = 0.25        # keep this fraction of water in reserve
+    reasoning:           str   = ""          # explanation of this strategy
 
     def summary(self) -> str:
         return (
@@ -56,13 +71,14 @@ class Strategy:
 def _heuristic_strategy(obs, current: Strategy) -> Strategy:
     """
     Deterministic expert-system strategy — no API required.
-    Applied when the LLM is unavailable or USE_MOCK_AI is False.
+    Applied when the LLM is unavailable or mock mode is off.
 
     Rules mirror what a human agronomist would decide:
-      - Low water + late game       → conserve water aggressively
+      - Many dry crops              → survival mode
       - Low soil health             → prioritise soil recovery
       - High market price + mature  → switch to profit mode
-      - Many dry crops              → survival mode
+      - Low water + late game       → conserve water aggressively
+      - Heatwave                    → boost moisture priority
     """
     s = Strategy(
         priority            = current.priority,
@@ -74,10 +90,10 @@ def _heuristic_strategy(obs, current: Strategy) -> Strategy:
         reasoning           = "[Heuristic Fallback]",
     )
 
-    water_pct  = obs.water / 120 if obs.water else 0
-    day_ratio  = obs.day / 30
-    dry_count  = sum(1 for c in obs.crops if c.moisture < 25)
-    mature     = [c for c in obs.crops if c.stage == "mature"]
+    water_pct = obs.water / 120 if obs.water else 0
+    day_ratio = obs.day / 30
+    dry_count = sum(1 for c in obs.crops if c.moisture < 25)
+    mature    = [c for c in obs.crops if c.stage == "mature"]
 
     # Survival: many crops critically dry
     if dry_count >= len(obs.crops) // 2:
@@ -121,12 +137,6 @@ class StrategistAgent:
     """
     LLM-powered Strategist that sets high-level directives every N days.
 
-    Resilience hierarchy (in order):
-      1. Mock mode (USE_MOCK_AI=true)  → reads from mock_responses.json
-      2. Live API (claude-haiku)       → fast, low-cost LLM call
-      3. Graceful degradation          → retains previous strategy on failure
-      4. Heuristic fallback            → deterministic expert-system rules
-
     Usage:
         strategist = StrategistAgent(review_interval=5)
         strategy   = strategist.advise(obs, reward_history)
@@ -151,26 +161,23 @@ Rules:
 - More than half crops with moisture < 25 → set priority=survival.
 - Always return valid JSON. No markdown fences."""
 
-    def __init__(
-        self,
-        review_interval: int = 5,
-        model: str = DEFAULT_MODEL,
-    ):
+    def __init__(self, review_interval: int = 5):
         self.review_interval = review_interval
-        self.model           = model
         self._current        = Strategy()
-        self._last_review    = -review_interval     # trigger immediately on day 1
+        self._last_review    = -review_interval    # trigger immediately on day 1
         self._mock_pool      = self._load_mock()
         self._mock_index     = 0
+        self._client         = None
 
-        # Lazy import gemini — graceful if not installed
-        self._client = None
         if not USE_MOCK_AI:
             try:
-                from google import genai
-                self._client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+                self._client = OpenAI(
+                    base_url = API_BASE_URL,
+                    api_key  = os.getenv("GEMINI_API_KEY", HF_TOKEN or "no-key"),
+                )
             except Exception as e:
-                print(f"  [PostMortem] Gemini unavailable ({e}) — statistical mode active.")
+                print(json.dumps({"type": "WARN", "msg": f"Strategist client init failed: {e}"}))
+
     # ── Public ─────────────────────────────────────────────────────────────────
 
     @property
@@ -189,33 +196,36 @@ Rules:
     # ── Internal ───────────────────────────────────────────────────────────────
 
     def _get_strategy(self, obs, reward_history: list) -> Strategy:
-        """Route to mock, live API, or heuristic — in that order."""
+        """Route to mock → live API → heuristic, in that order."""
 
-        # ── Path 1: Mock mode ──────────────────────────────────────────────────
+        # Path 1: Mock mode
         if USE_MOCK_AI and self._mock_pool:
             entry = self._mock_pool[self._mock_index % len(self._mock_pool)]
             self._mock_index += 1
-            print(f"  [Strategist] Mock response #{self._mock_index}")
-            return self._parse_strategy(entry)
+            print(json.dumps({"type": "WARN", "msg": f"Strategist mock response #{self._mock_index}"}))
+            return self._parse(entry)
 
-        # ── Path 2: Live LLM ───────────────────────────────────────────────────
+        # Path 2: Live OpenAI client → Gemini
         if self._client:
             try:
-                prompt   = self._build_prompt(obs, reward_history)
-                resp = self._client.models.generate_content(
-                model="gemini-2.0-flash",
-                contents=self.SYSTEM_PROMPT + "\n\n" + prompt
+                response = self._client.chat.completions.create(
+                    model    = MODEL_NAME,
+                    messages = [
+                        {"role": "system", "content": self.SYSTEM_PROMPT},
+                        {"role": "user",   "content": f"Farm state:\n{self._build_state(obs, reward_history)}"},
+                    ],
+                    max_tokens = 250,
                 )
-                raw = resp.text.strip()
+                raw = (response.choices[0].message.content or "").strip()
                 raw = re.sub(r"^```[a-z]*\n?", "", raw).rstrip("```").strip()
-                return self._parse_strategy(json.loads(raw))
+                return self._parse(json.loads(raw))
             except Exception as e:
-                print(f"  [Strategist] API failed ({type(e).__name__}) — switching to heuristic.")
+                print(json.dumps({"type": "WARN", "msg": f"Strategist API failed: {type(e).__name__} — heuristic"}))
 
-        # ── Path 3: Local heuristic (always works) ─────────────────────────────
+        # Path 3: Local heuristic (always works)
         return _heuristic_strategy(obs, self._current)
 
-    def _parse_strategy(self, data: dict) -> Strategy:
+    def _parse(self, data: dict) -> Strategy:
         return Strategy(
             priority            = data.get("priority",            self._current.priority),
             moisture_threshold  = float(data.get("moisture_threshold",  self._current.moisture_threshold)),
@@ -226,28 +236,38 @@ Rules:
             reasoning           = data.get("reasoning", ""),
         )
 
-    def _build_prompt(self, obs, reward_history: list) -> str:
-        crops = [
-            {"id": c.id, "stage": c.stage, "moisture": round(c.moisture, 1),
-             "growth": round(c.growth, 1), "pest": round(c.pest_level, 1)}
-            for c in obs.crops
-        ]
-        state = {
-            "day": obs.day, "water": round(obs.water, 1),
-            "fertilizer": round(obs.fertilizer, 1), "pesticide": round(obs.pesticide, 1),
-            "energy": round(obs.energy, 1), "weather": obs.weather,
-            "forecast": obs.forecast, "market_price": round(obs.market_price, 2),
-            "soil_health": round(obs.soil_health, 1), "crops": crops,
+    # Keep alias so any external code using _parse_strategy still works
+    _parse_strategy = _parse
+
+    def _build_state(self, obs, reward_history: list) -> str:
+        return json.dumps({
+            "day":          obs.day,
+            "water":        round(obs.water, 1),
+            "fertilizer":   round(obs.fertilizer, 1),
+            "pesticide":    round(obs.pesticide, 1),
+            "energy":       round(obs.energy, 1),
+            "weather":      obs.weather,
+            "forecast":     obs.forecast,
+            "market_price": round(obs.market_price, 2),
+            "soil_health":  round(obs.soil_health, 1),
+            "crops": [
+                {
+                    "id":       c.id,
+                    "stage":    c.stage,
+                    "moisture": round(c.moisture, 1),
+                    "growth":   round(c.growth, 1),
+                    "pest":     round(c.pest_level, 1),
+                }
+                for c in obs.crops
+            ],
             "recent_rewards": reward_history[-5:],
-        }
-        return f"Farm state:\n{json.dumps(state, indent=2)}"
+        }, indent=2)
 
     def _load_mock(self) -> list:
         if not os.path.exists(MOCK_FILE):
             return []
         try:
             with open(MOCK_FILE) as f:
-                data = json.load(f)
-                return data.get("strategist", [])
+                return json.load(f).get("strategist", [])
         except Exception:
             return []

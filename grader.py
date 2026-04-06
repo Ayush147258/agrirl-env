@@ -1,16 +1,19 @@
-from models import AgrirlAction as Action
+try:
+    from .models import AgrirlAction, AgrirlObservation
+except ImportError:
+    from models import AgrirlAction, AgrirlObservation
 
 
-def greedy_policy(obs) -> Action:
+def greedy_policy(obs) -> AgrirlAction:
     """Always irrigate the driest crop."""
     if not obs.crops:
-        return Action(crop_id=0, action="wait")
+        return AgrirlAction(crop_id=0, action="wait")
 
     crop = min(obs.crops, key=lambda c: c.moisture)
-    return Action(crop_id=crop.id, action="irrigate")
+    return AgrirlAction(crop_id=crop.id, action="irrigate")
 
 
-def smart_policy(obs) -> Action:
+def smart_policy(obs) -> AgrirlAction:
     """
     Smart policy:
     - Harvest mature crops when market price is good
@@ -19,18 +22,18 @@ def smart_policy(obs) -> Action:
     - Irrigate the driest crop otherwise
     """
     if not obs.crops:
-        return Action(crop_id=0, action="wait")
+        return AgrirlAction(crop_id=0, action="wait")
 
     # 🌾 Harvest mature crops when price is favorable
     mature = [c for c in obs.crops if c.stage == "mature"]
     if mature and obs.market_price > 1.0:
-        return Action(crop_id=mature[0].id, action="harvest")
+        return AgrirlAction(crop_id=mature[0].id, action="harvest")
 
     # 🌧️ Wait if rain forecast — no need to irrigate
     if obs.forecast == "rainy":
         dry = min(obs.crops, key=lambda c: c.moisture)
         if dry.moisture > 40:
-            return Action(crop_id=0, action="wait")
+            return AgrirlAction(crop_id=0, action="wait")
 
     # 💊 Fertilize if resources allow and crop is growing
     if obs.fertilizer >= 5 and obs.energy >= 3:
@@ -40,17 +43,17 @@ def smart_policy(obs) -> Action:
             and c.fertilized_times < 3  # avoid diminishing returns
         ]
         if growing:
-            return Action(crop_id=growing[0].id, action="fertilize")
+            return AgrirlAction(crop_id=growing[0].id, action="fertilize")
     # In greedy_policy — ignore pests (greedy doesn't spray)
     # In smart_policy — pesticide if any crop has high pest level and pesticide available 
     if obs.pesticide >= 5 and obs.energy >= 2:
         infested = [c for c in obs.crops if c.pest_level > 2]
         if infested:
             worst = max(infested, key=lambda c: c.pest_level)
-            return Action(crop_id=worst.id, action="pesticide")
+            return AgrirlAction(crop_id=worst.id, action="pesticide")
     # 💧 Irrigate driest crop by default
     crop = min(obs.crops, key=lambda c: c.moisture)
-    return Action(crop_id=crop.id, action="irrigate")
+    return AgrirlAction(crop_id=crop.id, action="irrigate")
 
 def _get_score(obs) -> float:
     """Extract final score from a terminal observation."""
