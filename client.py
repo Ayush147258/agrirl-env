@@ -70,12 +70,19 @@ class AgrirlEnv(
         """
         obs_data = payload.get("observation", {})
         observation = AgrirlObservation(
-            soil_moisture=obs_data.get("soil_moisture", 50.0),
-            crop_growth=obs_data.get("crop_growth", 0.0),
+            crops=obs_data.get("crops", []),
+            water=obs_data.get("water", 120.0),
+            fertilizer=obs_data.get("fertilizer", 60.0),
+            pesticide=obs_data.get("pesticide", 40.0),
+            energy=obs_data.get("energy", 200.0),
             day=obs_data.get("day", 1),
             weather=obs_data.get("weather", "sunny"),
-            done=payload.get("done", False),
+            forecast=obs_data.get("forecast", "sunny"),
+            market_price=obs_data.get("market_price", 1.0),
+            soil_health=obs_data.get("soil_health", 1.0),
             reward=payload.get("reward", 0.0),
+            done=payload.get("done", False),
+            score=payload.get("score", None),
         )
 
         return StepResult(
