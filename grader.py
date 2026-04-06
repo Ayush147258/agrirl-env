@@ -52,6 +52,9 @@ def smart_policy(obs) -> Action:
     crop = min(obs.crops, key=lambda c: c.moisture)
     return Action(crop_id=crop.id, action="irrigate")
 
+def _get_score(obs) -> float:
+    """Extract final score from a terminal observation."""
+    return obs.score if obs.score is not None else 0.0
 
 def run(env, policy, task: str = "easy") -> tuple:
     """
@@ -67,7 +70,7 @@ def run(env, policy, task: str = "easy") -> tuple:
         total_reward += obs.reward
 
     # ✅ Safe score fallback if None
-    final_score = obs.score if obs.score is not None else 0.0
+    final_score = _get_score(obs)
 
     return total_reward, final_score
 

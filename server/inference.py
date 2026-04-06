@@ -32,8 +32,6 @@ from visualizer import StrategyTimeline, save_episode_charts
 
 from server.agrirl_env_environment import AgriCoreEnv  # type: ignore
 from models import AgrirlAction as Action
-from dotenv import load_dotenv
-load_dotenv()
 
 
 # ── Executor (RL Agent) ───────────────────────────────────────────────────────

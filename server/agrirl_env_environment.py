@@ -11,8 +11,7 @@ from openenv.core.env_server.types import State
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from models import Action, Observation, Crop, AgrirlAction, AgrirlObservation,WeatherType
-
+from models import Crop, AgrirlAction, AgrirlObservation, WeatherType
 
 class AgriCoreEnv(Environment):
     SUPPORTS_CONCURRENT_SESSIONS = True
@@ -23,7 +22,7 @@ class AgriCoreEnv(Environment):
         self.task = "easy"
         self.reset()
 
-    def reset(self, task: Optional[str] = None) -> Observation:
+    def reset(self, task: Optional[str] = None) -> AgrirlObservation:
         self._state = State(episode_id=str(uuid4()), step_count=0)
 
         # ✅ Task difficulty from 2nd file

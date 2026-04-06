@@ -5,29 +5,29 @@ except Exception as e:
         "openenv is required. Install dependencies with `uv sync`"
     ) from e
 
+
+# ✅ FIXED IMPORT BLOCK
 try:
     from ..models import AgrirlAction, AgrirlObservation
     from .agrirl_env_environment import AgriCoreEnv as AgrirlEnvironment
-except ModuleNotFoundError:
+
+except (ModuleNotFoundError, ImportError):
+    # fallback for direct execution (uvicorn / docker / HF)
     from models import AgrirlAction, AgrirlObservation
     from server.agrirl_env_environment import AgriCoreEnv as AgrirlEnvironment
 
+
+# App creation
 app = create_app(
     AgrirlEnvironment,
     AgrirlAction,
     AgrirlObservation,
     env_name="agrirl_env",
-    max_concurrent_envs=1,  # increase this number for more concurrent WebSocket sessions
+    max_concurrent_envs=1,
 )
 
-def main(host: str = "0.0.0.0", port: int = 8000):
-    """
-    Entry point for direct execution via uv run or python -m.
 
-    Args:
-        host: Host address to bind to (default: "0.0.0.0")
-        port: Port number to listen on (default: 8000)
-    """
+def main(host: str = "0.0.0.0", port: int = 8000):
     import uvicorn
     uvicorn.run(app, host=host, port=port)
 
