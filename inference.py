@@ -47,35 +47,26 @@ client = OpenAI(
 )
 
 # ── Project imports ────────────────────────────────────────────────────────────
+import sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 try:
     from server.agrirl_env_environment import AgriCoreEnv
 except ModuleNotFoundError:
     from agrirl_env.server.agrirl_env_environment import AgriCoreEnv
 
-try:
-    try:
-        from .models import AgrirlAction, AgrirlObservation
-    except ImportError:
-        from models import AgrirlAction, AgrirlObservation
-    from grader import _get_score
-    from strategist import StrategistAgent, Strategy
-    from digital_twin import DigitalTwin
-    from post_mortem import PostMortemAnalyst
-    from knowledge_base import AgriculturalLedger
-    from visualizer import StrategyTimeline, save_episode_charts
-except ModuleNotFoundError:
-    from agrirl_env.models import AgrirlAction as Action
-    from agrirl_env.grader import _get_score
-    from agrirl_env.strategist import StrategistAgent, Strategy
-    from agrirl_env.digital_twin import DigitalTwin
-    from agrirl_env.post_mortem import PostMortemAnalyst
-    from agrirl_env.knowledge_base import AgriculturalLedger
-    from agrirl_env.visualizer import StrategyTimeline, save_episode_charts
+from models import AgrirlAction as Action
+from grader import _get_score
+from strategist import StrategistAgent, Strategy
+from digital_twin import DigitalTwin
+from post_mortem import PostMortemAnalyst
+from knowledge_base import AgriculturalLedger
+from visualizer import StrategyTimeline, save_episode_charts
 
 
 # ── Executor (RL Agent) ────────────────────────────────────────────────────────
 
-def act(obs, strategy: "Strategy | None" = None) -> Action:
+def act(obs, strategy: "Strategy | None" = None) -> "Action":
     """
     RL Executor — 8-priority decision tree driven by Strategy thresholds.
     Falls back to hardcoded defaults if no strategy provided.
@@ -206,7 +197,7 @@ def get_llm_directive(obs) -> str:
             messages   = [{"role": "user", "content": prompt}],
             max_tokens = 40,
         )
-        return response.choices[0].message.content.strip()
+        return (response.choices[0].message.content or "").strip()
     except Exception as e:
         return f"Heuristic mode (API unavailable: {type(e).__name__})"
 

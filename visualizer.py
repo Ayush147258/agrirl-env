@@ -246,10 +246,10 @@ def save_episode_charts(
     ax.axhline(35, color="#f87171", linewidth=1.0, linestyle=":", zorder=2)
     ax.axhline(80, color="#f59e0b", linewidth=1.0, linestyle=":", zorder=2)
     ax.fill_between(
-        days, days, moisture,35,
+        days, moisture, 35,
         where=[m < 35 for m in moisture],
         alpha=0.22, color="#f87171", zorder=1,
-    )
+   )
     ax.fill_between(
         days, moisture, 80,
         where=[m > 80 for m in moisture],
