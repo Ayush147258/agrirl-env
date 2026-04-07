@@ -122,6 +122,9 @@ class DigitalTwin:
         url = self.OPEN_METEO_URL.format(lat=self.lat, lon=self.lon)
         try:
             req = urllib.request.Request(url, headers={"User-Agent": "AgriRL-DigitalTwin/1.0"})
+            import requests
+            resp = requests.get(url, timeout=self.timeout, verify=False)
+            data = resp.json()
             with urllib.request.urlopen(req, timeout=self.timeout) as resp:
                 data    = json.loads(resp.read())
                 current = data["current"]

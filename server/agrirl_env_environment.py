@@ -21,7 +21,8 @@ class AgriCoreEnv(Environment):
         self._state = State(episode_id=str(uuid4()), step_count=0)
         self.task = "easy"
         self.reset()
-
+    def seed(self, seed: int):
+        random.seed(seed)  
     def reset(self, task: Optional[str] = None) -> AgrirlObservation:
         self._state = State(episode_id=str(uuid4()), step_count=0)
 
@@ -69,7 +70,9 @@ class AgriCoreEnv(Environment):
     def step(self, action: AgrirlAction) -> AgrirlObservation:
         self._state.step_count += 1
 
-        # ✅ Guard from 2nd file — return immediately if already done
+        VALID_ACTIONS = ["irrigate", "fertilize", "pesticide", "harvest", "wait"]
+        if action.action not in VALID_ACTIONS:
+            action = AgrirlAction(crop_id=0, action="wait")
         if self.done:
             return self._obs("sunny", 0.0, done=True, score=self._compute_score())
 

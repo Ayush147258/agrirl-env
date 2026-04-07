@@ -9,3 +9,5 @@ description: |
 
 entry_point: server.app:app
 port: 8000
+build:
+  requirements: requirements.txt
