@@ -60,3 +60,10 @@ test.py
 # -------------------------
 server/__pycache__/
 agrirl_env/__pycache__/
+
+
+knowledge_base.json
+agri_dashboard_*.png
+
+*.pyc
+

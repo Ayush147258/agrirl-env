@@ -5,7 +5,8 @@ from uuid import uuid4
 from typing import List, Optional ,cast
 
 
-from openenv.core.env_server.interfaces import Environment
+
+from openenv.core.env_server.interfaces import Environment    
 from openenv.core.env_server.types import State
 
 
@@ -33,12 +34,12 @@ class AgriCoreEnv(Environment):
         self.done = False
 
         self.crops: List[Crop] = [
-            Crop(id=i, moisture=50, growth=0, stage="seed",
+            Crop(id=i, moisture=60, growth=0, stage="seed",
                  wait_days=0, fertilized_times=0, pest_level=0)
             for i in range(4)
         ]
 
-        self.water = 120
+        self.water = 150
         self.fertilizer = 60
         self.energy = 200
         self.pesticide = 40
@@ -85,13 +86,13 @@ class AgriCoreEnv(Environment):
             c.wait_days += 1
 
             if weather == "sunny":
-                c.moisture -= 5
+                c.moisture -= 3
             elif weather == "rainy":
                 c.moisture += 10
             elif weather == "cloudy":
                 pass  # neutral
             elif weather == "heatwave":
-                c.moisture -= 20
+                c.moisture -= 15
                 reward -= 3
             elif weather == "frost":
                 c.growth -= 2
@@ -102,7 +103,7 @@ class AgriCoreEnv(Environment):
                 if c.moisture > 85:
                     reward -= 4
                 if c.moisture < 25:
-                    reward -= 4
+                    reward -= 2
 
         # ⚡ ENERGY + ACTION (1st file — resource-aware actions)
         c = self.crops[action.crop_id]
